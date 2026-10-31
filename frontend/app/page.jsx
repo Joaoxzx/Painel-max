@@ -364,8 +364,8 @@ export default function Home() {
               <span>Total</span>
               <strong>{money(order.total)}</strong>
             </div>
-            <button type="button" className="secondary" onClick={newOrder}>{editing ? 'Cancelar edição' : 'Limpar / próximo pedido'}</button>
-            <button type="submit" disabled={saving}>
+            <button type="button" className="btn-clear" onClick={newOrder}>{editing ? 'Cancelar edição' : 'Limpar / próximo pedido'}</button>
+            <button type="submit" className="btn-save" disabled={saving}>
               {saving ? 'Salvando…' : editing ? 'Salvar alterações e imprimir' : 'Salvar e imprimir pedido'}
             </button>
           </div>

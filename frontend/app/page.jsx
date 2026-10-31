@@ -239,7 +239,8 @@ export default function Home() {
   const term = search.toLowerCase();
   const filtered = history.orders.filter(o => (o.customer + ' ' + o.number).toLowerCase().includes(term));
   const small = paper === '58';
-  const paperCss = `@page{size:${small ? '58' : '80'}mm 297mm;margin:3mm ${small ? '3' : '3.95'}mm}@media print{#receipt{width:${small ? '52' : '72.1'}mm}}`;
+  // No 80 mm não força o tamanho: usa o papel da própria impressora (80(72.1) x 297 mm).
+  const paperCss = `@page{${small ? 'size:58mm 297mm;' : ''}margin:3mm ${small ? '3' : '3.95'}mm}@media print{#receipt{width:${small ? '52' : '72.1'}mm}}`;
   const receiptOrder = viewOrder || { ...order, number: editing?.number, createdAt: editing?.createdAt };
 
   return (

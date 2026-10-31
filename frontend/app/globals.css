@@ -34,6 +34,8 @@
   color-scheme: light;
 }
 
+/* Só na tela: a nota impressa sai sempre clara. */
+@media screen {
 html[data-theme="dark"] {
   --bg: #15181b;
   --surface: #1f2327;
@@ -56,6 +58,7 @@ html[data-theme="dark"] {
   --sidebar-active: #23262b;
   --shadow: 0 1px 2px #0000004d, 0 8px 24px #00000033;
   color-scheme: dark;
+}
 }
 
 /* ---------- Base ---------- */
@@ -280,17 +283,6 @@ html[data-theme="dark"] .finance { --series: #3987e5; --wash: #3987e51f; --up: #
 .receipt-item-note, .receipt-detail { white-space: pre-line; }
 #receipt .total { font-size: 20px; font-weight: 900; }
 
-@media print {
-  body { background: #fff; }
-  .app { display: block; }
-  .sidebar, main, .toast, .preview-header, .preview-hint, .preview > button { display: none !important; }
-  .preview { display: block !important; position: static; width: auto; height: auto; padding: 0; border: 0; overflow: visible; background: #fff; }
-  #receipt { width: 72.1mm; max-width: none; margin: 0 auto; padding: 0; box-shadow: none; line-height: 1.45; }
-  #receipt .receipt-item-note { font-size: 13px; font-weight: 900; }
-  .receipt-item, .receipt-detail, #receipt .total { break-inside: avoid; }
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
-
 /* ---------- Telas menores ---------- */
 @media (max-width: 1200px) {
   :root { --sidebar-w: 176px; --preview-w: 330px; }
@@ -326,4 +318,16 @@ html[data-theme="dark"] .finance { --series: #3987e5; --wash: #3987e51f; --up: #
   .customer-stats { align-items: flex-start; }
   .menu-toolbar { flex-wrap: wrap; }
   .category-footer { padding: 10px 16px; }
+}
+
+/* ---------- Impressão (por último, para valer sobre os ajustes de telas menores) ---------- */
+@media print {
+  html, body { background: #fff; color: #000; }
+  .app { display: block; }
+  .sidebar, main, .toast, .preview-header, .preview-hint, .preview > button { display: none !important; }
+  .preview { display: block !important; position: static; width: auto; height: auto; padding: 0; border: 0; overflow: visible; background: #fff; }
+  #receipt { width: 72.1mm; max-width: none; margin: 0 auto; padding: 0; box-shadow: none; line-height: 1.45; }
+  #receipt .receipt-item-note { font-size: 13px; font-weight: 900; }
+  .receipt-item, .receipt-detail, #receipt .total { break-inside: avoid; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

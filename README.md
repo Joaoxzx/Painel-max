@@ -7,7 +7,7 @@ Painel de pedidos da Lanchonete e Pizzaria Do Geovani.
 
 ## Como rodar
 
-- Windows: dois cliques em `INICIAR.bat`
+- Windows: instale o Node.js LTS (22 ou mais novo) em https://nodejs.org e dê dois cliques em `INICIAR.bat`
 - Desenvolvimento: `npm install` e depois `npm run dev`
 - Testes: `npm test`
 

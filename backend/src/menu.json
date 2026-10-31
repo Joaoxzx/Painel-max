@@ -1,0 +1,760 @@
+[
+  {
+    "id": "hamburguer",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER",
+    "price": 12,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate"
+    ]
+  },
+  {
+    "id": "hamburguer-calabresa",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER CALABRESA",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "calabresa"
+    ]
+  },
+  {
+    "id": "hamburguer-frango",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER FRANGO",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "frango"
+    ]
+  },
+  {
+    "id": "hamburguer-bacon",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER BACON",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "bacon"
+    ]
+  },
+  {
+    "id": "hamburguer-catupiry",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER CATUPIRY",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "catupiry"
+    ]
+  },
+  {
+    "id": "hamburguer-cheddar",
+    "category": "Lanches",
+    "name": "HAMBÚRGUER CHEDDAR",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "cheddar"
+    ]
+  },
+  {
+    "id": "egg-burguer",
+    "category": "Lanches",
+    "name": "EGG BURGUER",
+    "price": 15,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "ovo"
+    ]
+  },
+  {
+    "id": "egg-bacon",
+    "category": "Lanches",
+    "name": "EGG BACON",
+    "price": 23,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "ovo",
+      "bacon"
+    ]
+  },
+  {
+    "id": "x-burguer",
+    "category": "Lanches",
+    "name": "X-BURGUER",
+    "price": 19,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela"
+    ]
+  },
+  {
+    "id": "x-frango",
+    "category": "Lanches",
+    "name": "X-FRANGO",
+    "price": 23,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "frango"
+    ]
+  },
+  {
+    "id": "x-calabresa",
+    "category": "Lanches",
+    "name": "X-CALABRESA",
+    "price": 23,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "calabresa"
+    ]
+  },
+  {
+    "id": "x-egg",
+    "category": "Lanches",
+    "name": "X-EGG",
+    "price": 23,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo"
+    ]
+  },
+  {
+    "id": "x-bacon",
+    "category": "Lanches",
+    "name": "X-BACON",
+    "price": 23,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "bacon"
+    ]
+  },
+  {
+    "id": "x-bacon-frango",
+    "category": "Lanches",
+    "name": "X-BACON FRANGO",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "bacon",
+      "frango"
+    ]
+  },
+  {
+    "id": "x-bacon-calabresa",
+    "category": "Lanches",
+    "name": "X-BACON CALABRESA",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "bacon",
+      "calabresa"
+    ]
+  },
+  {
+    "id": "x-bacon-catupiry",
+    "category": "Lanches",
+    "name": "X-BACON CATUPIRY",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "bacon",
+      "catupiry"
+    ]
+  },
+  {
+    "id": "x-bacon-cheddar",
+    "category": "Lanches",
+    "name": "X-BACON CHEDDAR",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "bacon",
+      "cheddar"
+    ]
+  },
+  {
+    "id": "x-frango-cheddar",
+    "category": "Lanches",
+    "name": "X-FRANGO CHEDDAR",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "frango",
+      "cheddar"
+    ]
+  },
+  {
+    "id": "x-frango-catupiry",
+    "category": "Lanches",
+    "name": "X-FRANGO CATUPIRY",
+    "price": 28,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "frango",
+      "catupiry"
+    ]
+  },
+  {
+    "id": "x-tudo",
+    "category": "Lanches",
+    "name": "X-TUDO",
+    "price": 25,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo",
+      "bacon"
+    ]
+  },
+  {
+    "id": "x-tudo-frango",
+    "category": "Lanches",
+    "name": "X-TUDO FRANGO",
+    "price": 30,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo",
+      "bacon",
+      "frango"
+    ]
+  },
+  {
+    "id": "x-tudo-calabresa",
+    "category": "Lanches",
+    "name": "X-TUDO CALABRESA",
+    "price": 30,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo",
+      "bacon",
+      "calabresa"
+    ]
+  },
+  {
+    "id": "x-tudo-catupiry",
+    "category": "Lanches",
+    "name": "X-TUDO CATUPIRY",
+    "price": 30,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo",
+      "bacon",
+      "catupiry"
+    ]
+  },
+  {
+    "id": "x-tudo-c-calabresa-frango-catupiry",
+    "category": "Lanches",
+    "name": "X-TUDO C/ CALABRESA, FRANGO, CATUPIRY",
+    "price": 40,
+    "ingredients": [
+      "Pão",
+      "bife",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "presunto",
+      "mussarela",
+      "ovo",
+      "bacon",
+      "calabresa",
+      "frango",
+      "catupiry"
+    ]
+  },
+  {
+    "id": "x-tudo-duplo",
+    "category": "Lanches",
+    "name": "X-TUDO DUPLO",
+    "price": 48,
+    "ingredients": [
+      "Pão",
+      "2 bifes",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "2 presuntos",
+      "2 mussarelas",
+      "2 ovos",
+      "bacon"
+    ]
+  },
+  {
+    "id": "x-cavernoso",
+    "category": "Lanches",
+    "name": "X-CAVERNOSO",
+    "price": 60,
+    "ingredients": [
+      "Pão",
+      "2 bifes",
+      "milho",
+      "batata",
+      "alface",
+      "tomate",
+      "2 presuntos",
+      "2 mussarelas",
+      "bacon",
+      "calabresa",
+      "frango",
+      "catupiry",
+      "2 ovos"
+    ]
+  },
+  {
+    "id": "misto-simples",
+    "category": "Mistos",
+    "name": "MISTO SIMPLES",
+    "price": 12,
+    "ingredients": [
+      "Pão de forma",
+      "presunto",
+      "mussarela"
+    ]
+  },
+  {
+    "id": "misto-c-ovo",
+    "category": "Mistos",
+    "name": "MISTO C/ OVO",
+    "price": 15,
+    "ingredients": [
+      "Pão de forma",
+      "presunto",
+      "mussarela",
+      "ovo"
+    ]
+  },
+  {
+    "id": "misto-c-bife",
+    "category": "Mistos",
+    "name": "MISTO C/ BIFE",
+    "price": 15,
+    "ingredients": [
+      "Pão de forma",
+      "presunto",
+      "mussarela",
+      "bife"
+    ]
+  },
+  {
+    "id": "misto-c-bacon",
+    "category": "Mistos",
+    "name": "MISTO C/ BACON",
+    "price": 19,
+    "ingredients": [
+      "Pão de forma",
+      "presunto",
+      "mussarela",
+      "bacon"
+    ]
+  },
+  {
+    "id": "misto-duplo",
+    "category": "Mistos",
+    "name": "MISTO DUPLO",
+    "price": 20,
+    "ingredients": [
+      "Pão de forma",
+      "2 presuntos",
+      "2 mussarelas"
+    ]
+  },
+  {
+    "id": "misto-duplo-completo",
+    "category": "Mistos",
+    "name": "MISTO DUPLO COMPLETO",
+    "price": 35,
+    "ingredients": [
+      "Pão de forma",
+      "2 presuntos",
+      "2 mussarelas",
+      "ovo",
+      "bacon",
+      "bife",
+      "alface",
+      "tomate",
+      "milho",
+      "batata"
+    ]
+  },
+  {
+    "id": "pizza-mussarela",
+    "category": "Pizzas",
+    "name": "PIZZA MUSSARELA",
+    "price": 40,
+    "ingredients": [
+      "Queijo mussarela",
+      "tomate",
+      "azeitonas",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-calabresa",
+    "category": "Pizzas",
+    "name": "PIZZA CALABRESA",
+    "price": 40,
+    "ingredients": [
+      "Queijo mussarela",
+      "calabresa",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-bacon",
+    "category": "Pizzas",
+    "name": "PIZZA BACON",
+    "price": 40,
+    "ingredients": [
+      "Queijo mussarela",
+      "bacon",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-frango",
+    "category": "Pizzas",
+    "name": "PIZZA FRANGO",
+    "price": 40,
+    "ingredients": [
+      "Queijo mussarela",
+      "frango",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-frango-catupiry",
+    "category": "Pizzas",
+    "name": "PIZZA FRANGO CATUPIRY",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "frango",
+      "catupiry",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-frango-cheddar",
+    "category": "Pizzas",
+    "name": "PIZZA FRANGO CHEDDAR",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "frango",
+      "cheddar",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-bacon-catupiry",
+    "category": "Pizzas",
+    "name": "PIZZA BACON CATUPIRY",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "bacon",
+      "catupiry",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-calabresa-catupiry",
+    "category": "Pizzas",
+    "name": "PIZZA CALABRESA CATUPIRY",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "calabresa",
+      "catupiry",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-presunto-mussarela",
+    "category": "Pizzas",
+    "name": "PIZZA PRESUNTO MUSSARELA",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-presunto-calabresa",
+    "category": "Pizzas",
+    "name": "PIZZA PRESUNTO CALABRESA",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "calabresa",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-presunto-bacon",
+    "category": "Pizzas",
+    "name": "PIZZA PRESUNTO BACON",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "bacon",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-presunto-frango",
+    "category": "Pizzas",
+    "name": "PIZZA PRESUNTO FRANGO",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "frango",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-presunto-catupiry",
+    "category": "Pizzas",
+    "name": "PIZZA PRESUNTO CATUPIRY",
+    "price": 45,
+    "ingredients": [
+      "Queijo mussarela",
+      "catupiry",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-mixta-de-frango",
+    "category": "Pizzas",
+    "name": "PIZZA MIXTA DE FRANGO",
+    "price": 53,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "calabresa",
+      "frango",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-mixta-de-bacon",
+    "category": "Pizzas",
+    "name": "PIZZA MIXTA DE BACON",
+    "price": 53,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "calabresa",
+      "bacon",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-portuguesa",
+    "category": "Pizzas",
+    "name": "PIZZA PORTUGUESA",
+    "price": 53,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "calabresa",
+      "ovo",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  },
+  {
+    "id": "pizza-a-moda-da-casa",
+    "category": "Pizzas",
+    "name": "PIZZA A MODA DA CASA",
+    "price": 60,
+    "ingredients": [
+      "Queijo mussarela",
+      "presunto",
+      "calabresa",
+      "frango",
+      "bacon",
+      "catupiry",
+      "cebola",
+      "pimentão",
+      "orégano"
+    ]
+  }
+]

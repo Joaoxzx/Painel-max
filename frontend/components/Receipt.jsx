@@ -16,13 +16,19 @@ export default function Receipt({ order: o }) {
       </div>
       <div>{new Date(o.createdAt || Date.now()).toLocaleString('pt-BR')}</div>
       <div className="rule" />
-      {o.items.map((i, n) => (
-        <div className="receipt-item" key={n}>
-          <strong>{i.name || 'Descrição do item'}</strong>
-          <div className="receipt-row"><span>{i.qty} un × {money(i.price)}</span><span>{money(i.qty * i.price)}</span></div>
-          {i.notes && <div className="receipt-item-note">OBS.: {i.notes}</div>}
-        </div>
-      ))}
+      {o.items.map((i, n) => {
+        const removed = (i.ingredients || []).filter(g => g.removed).map(g => g.name);
+        const extras = (i.ingredients || []).filter(g => g.extra).map(g => g.name);
+        return (
+          <div className="receipt-item" key={n}>
+            <strong>{i.name || 'Descrição do item'}</strong>
+            <div className="receipt-row"><span>{i.qty} un × {money(i.price)}</span><span>{money(i.qty * i.price)}</span></div>
+            {removed.length > 0 && <div className="receipt-item-note">SEM: {removed.join(', ')}</div>}
+            {extras.length > 0 && <div className="receipt-item-note">ADICIONAL: {extras.join(', ')}</div>}
+            {i.notes && <div className="receipt-item-note">OBS.: {i.notes}</div>}
+          </div>
+        );
+      })}
       <div className="rule" />
       <div className="receipt-row"><span>Subtotal</span><span>{money(o.subtotal)}</span></div>
       {!!o.fee && <div className="receipt-row"><span>Entrega</span><span>{money(o.fee)}</span></div>}

@@ -4,26 +4,52 @@ import { useEffect, useRef, useState } from 'react';
 import Receipt from '../components/Receipt';
 import Finance from '../components/Finance';
 import MenuEditor from '../components/MenuEditor';
-import MenuSearch from '../components/MenuSearch';
-import IngredientsEditor from '../components/IngredientsEditor';
+import MenuPicker from '../components/MenuPicker';
+import OrderLine from '../components/OrderLine';
+import Segmented from '../components/Segmented';
 import CustomerSearch from '../components/CustomerSearch';
 import Customers from '../components/Customers';
-import { formatPhone } from '../lib/format';
-import { money } from '../lib/format';
+import { formatPhone, money } from '../lib/format';
 
 const emptyForm = {
   customer: '', phone: '', mode: 'Delivery', neighborhood: '', address: '', complement: '', reference: '',
   payment: 'Pix', fee: '0', discount: '0', notes: '',
 };
+const MODES = ['Delivery', 'Retirada', 'Balcão'];
+const PAYMENTS = [
+  { value: 'Pix', label: 'Pix' },
+  { value: 'Dinheiro', label: 'Dinheiro' },
+  { value: 'Cartão de crédito', label: 'Crédito' },
+  { value: 'Cartão de débito', label: 'Débito' },
+  { value: 'iFood', label: 'iFood' },
+];
+const VIEWS = [
+  { id: 'editor', icon: '＋', label: 'Novo pedido' },
+  { id: 'history', icon: '▤', label: 'Pedidos' },
+  { id: 'finance', icon: '▥', label: 'Financeiro' },
+  { id: 'menu', icon: '☰', label: 'Cardápio' },
+  { id: 'customers', icon: '☺', label: 'Clientes' },
+];
+const HEADINGS = {
+  history: ['Pedidos', 'Reimprima, edite ou exclua pedidos já salvos.'],
+  finance: ['Financeiro', 'Acompanhe o faturamento do mês ou de qualquer período.'],
+  menu: ['Cardápio', 'Adicione, edite ou remova itens. As mudanças valem para os próximos pedidos.'],
+  customers: ['Clientes', 'Cadastros salvos neste computador, com o histórico de pedidos de cada um.'],
+};
+
 let itemKey = 0;
-const newItem = () => ({ key: ++itemKey, name: '', qty: '1', price: '', notes: '', ingredients: [] });
+const newItem = fields => ({ key: ++itemKey, name: '', qty: '1', price: '', notes: '', ingredients: [], ...fields });
+const fromMenu = m => newItem({ name: m.name, price: String(m.price), ingredients: m.ingredients.map(name => ({ name, removed: false, extra: false })) });
+const untouched = i => !i.custom && !i.notes.trim() && i.ingredients.every(g => !g.removed && !g.extra);
+const pad = n => String(n).padStart(4, '0');
 
 function buildOrder(form, items, customerId = null) {
   const order = {
     ...form,
     customerId,
     items: items.map(i => ({ name: i.name, qty: Number(i.qty), price: Number(i.price), notes: i.notes, ingredients: i.ingredients })),
-    fee: Number(form.fee) || 0,
+    // Taxa de entrega só conta no delivery (o campo some nos outros tipos).
+    fee: form.mode === 'Delivery' ? Number(form.fee) || 0 : 0,
     discount: Number(form.discount) || 0,
   };
   order.subtotal = order.items.reduce((s, i) => s + Math.round(i.qty * i.price * 100) / 100, 0);
@@ -42,12 +68,13 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState('editor');
   const [form, setForm] = useState(emptyForm);
-  const [items, setItems] = useState(() => [newItem()]);
-  const [viewOrder, setViewOrder] = useState(null);
+  const [items, setItems] = useState([]);
+  const [expanded, setExpanded] = useState(null); // key do item com ajustes abertos
+  const [viewOrder, setViewOrder] = useState(null); // pedido salvo mostrado na nota
   const [editing, setEditing] = useState(null);
-  const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
-  const [printLabel, setPrintLabel] = useState('Imprimir prévia');
+  const [toast, setToast] = useState(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const [printRequest, setPrintRequest] = useState(0);
   const [history, setHistory] = useState({ orders: [], error: '' });
   const [search, setSearch] = useState('');
@@ -57,6 +84,8 @@ export default function Home() {
   const [customerId, setCustomerId] = useState(null); // cliente cadastrado escolhido no pedido
   const [saveCustomer, setSaveCustomer] = useState(true); // caixinha "Salvar cliente"
   const customerRef = useRef(null);
+  const searchRef = useRef(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     setPaper(readStorage('paper') === '58' ? '58' : '80');
@@ -80,18 +109,43 @@ export default function Home() {
     Promise.all(images.map(i => i.decode().catch(() => {}))).then(() => window.print());
   }, [printRequest]);
 
-  const edit = () => setViewOrder(null);
-  const setField = e => { setForm(f => ({ ...f, [e.target.name]: e.target.value })); edit(); };
-  const setItem = (key, field, value) => { setItems(list => list.map(i => (i.key === key ? { ...i, [field]: value } : i))); edit(); };
-  const pickMenuItem = (key, m) => {
-    setItems(list => list.map(i => (i.key === key ? {
-      ...i,
-      name: m.name,
-      price: String(m.price),
-      ingredients: m.ingredients.map(name => ({ name, removed: false, extra: false })),
-    } : i)));
-    edit();
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), toast.kind === 'error' ? 6000 : 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // Atalhos: Ctrl+Enter salva, F2 vai para a busca do cardápio, Esc fecha a nota.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape' && receiptOpen) closeReceipt();
+      if (view !== 'editor') return;
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); formRef.current?.requestSubmit(); }
+      if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  const notify = (text, kind = 'ok') => setToast({ text, kind, id: Date.now() });
+  const setField = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const setValue = (name, value) => setForm(f => ({ ...f, [name]: value }));
+  const setItem = (key, field, value) => setItems(list => list.map(i => (i.key === key ? { ...i, [field]: value } : i)));
+
+  // Clicar de novo num item igual (sem ajustes) só aumenta a quantidade.
+  function addFromMenu(m) {
+    const same = items.find(i => i.name === m.name && Number(i.price) === m.price && untouched(i));
+    if (same) setItem(same.key, 'qty', String(Math.min(999, Number(same.qty) + 1)));
+    else setItems(list => [...list, fromMenu(m)]);
+  }
+  const addCustom = () => {
+    const item = newItem({ custom: true });
+    setItems(list => [...list, item]);
+    setExpanded(item.key);
   };
+  const pickForLine = (key, m) => setItems(list => list.map(i => (i.key === key ? { ...fromMenu(m), key } : i)));
+  const removeItem = key => setItems(list => list.filter(i => i.key !== key));
+
   const pickCustomer = c => {
     setForm(f => ({
       ...f,
@@ -103,15 +157,28 @@ export default function Home() {
       reference: c.reference,
     }));
     setCustomerId(c.id);
-    edit();
   };
-  const removeItem = key => { if (items.length > 1) { setItems(list => list.filter(i => i.key !== key)); edit(); } };
-  const addItem = () => { setItems(list => [...list, newItem()]); edit(); };
+
+  function resetOrder() {
+    setForm(emptyForm);
+    setItems([]);
+    setExpanded(null);
+    setEditing(null);
+    setCustomerId(null);
+    setSaveCustomer(true);
+  }
+
+  function newOrder() {
+    resetOrder();
+    setViewOrder(null);
+    setView('editor');
+    setTimeout(() => customerRef.current?.focus());
+  }
 
   async function submit(e) {
     e.preventDefault();
+    if (!items.length) { notify('Adicione pelo menos um item à comanda.', 'error'); return; }
     setSaving(true);
-    setMessage('');
     try {
       const response = await fetch(editing ? '/api/orders/' + editing.id : '/api/orders', {
         method: editing ? 'PUT' : 'POST',
@@ -120,13 +187,14 @@ export default function Home() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
+      notify(`Pedido #${pad(data.number)} ${editing ? 'atualizado' : 'salvo'}. Imprimindo…`);
+      // Já deixa a tela pronta para o próximo pedido; a nota impressa é a do pedido salvo.
+      resetOrder();
       setViewOrder(data);
-      setCustomerId(data.customerId ?? null);
-      if (editing) setEditing(data);
-      setMessage('Pedido #' + data.number + (editing ? ' atualizado.' : ' salvo. Você pode reimprimir pelo histórico.'));
       setPrintRequest(n => n + 1);
+      setTimeout(() => customerRef.current?.focus());
     } catch (err) {
-      setMessage(err.message || 'Não foi possível salvar o pedido.');
+      notify(err.message || 'Não foi possível salvar o pedido.', 'error');
     } finally {
       setSaving(false);
     }
@@ -139,219 +207,216 @@ export default function Home() {
       if (!r.ok) throw new Error();
       setHistory({ orders: await r.json(), error: '' });
     } catch {
-      setHistory({ orders: [], error: 'Não foi possível carregar o histórico.' });
+      setHistory({ orders: [], error: 'Não foi possível carregar os pedidos.' });
     }
   }
 
   function editOrder(o) {
     const text = v => String(v ?? '');
     setForm(Object.fromEntries(Object.keys(emptyForm).map(k => [k, text(o[k])])));
-    setItems(o.items.map(i => ({ ...newItem(), name: i.name, qty: text(i.qty), price: text(i.price), notes: text(i.notes), ingredients: i.ingredients || [] })));
+    setItems(o.items.map(i => newItem({ name: i.name, qty: text(i.qty), price: text(i.price), notes: text(i.notes), ingredients: i.ingredients || [] })));
+    setExpanded(null);
     setEditing(o);
     setCustomerId(o.customerId ?? null);
     setSaveCustomer(true);
     setViewOrder(null);
-    setMessage('');
-    setPrintLabel('Imprimir prévia');
     setView('editor');
   }
 
   async function deleteOrder(o) {
-    if (!window.confirm(`Excluir o pedido #${String(o.number).padStart(4, '0')} de ${o.customer}? Isso não pode ser desfeito.`)) return;
+    if (!window.confirm(`Excluir o pedido #${pad(o.number)} de ${o.customer}? Isso não pode ser desfeito.`)) return;
     try {
       const r = await fetch('/api/orders/' + o.id, { method: 'DELETE' });
       if (!r.ok && r.status !== 404) throw new Error((await r.json()).error);
       setHistory(h => ({ ...h, orders: h.orders.filter(x => x.id !== o.id) }));
-      if (viewOrder?.id === o.id) { setViewOrder(null); setPrintLabel('Imprimir prévia'); }
+      if (viewOrder?.id === o.id) setViewOrder(null);
       if (editing?.id === o.id) setEditing(null);
+      notify(`Pedido #${pad(o.number)} excluído.`);
     } catch (err) {
-      setHistory(h => ({ ...h, error: err.message || 'Não foi possível excluir o pedido.' }));
+      notify(err.message || 'Não foi possível excluir o pedido.', 'error');
     }
   }
 
-  function clearOrder() {
-    setView('editor');
-    setForm(emptyForm);
-    setItems([newItem()]);
-    setViewOrder(null);
-    setEditing(null);
-    setCustomerId(null);
-    setSaveCustomer(true);
-    setMessage('');
-    setPrintLabel('Imprimir prévia');
-    setTimeout(() => customerRef.current?.focus());
-  }
+  const showReceipt = order => { setViewOrder(order); setReceiptOpen(true); };
+  function closeReceipt() { setReceiptOpen(false); setViewOrder(null); }
 
-  const wide = view === 'finance' || view === 'menu' || view === 'customers'; // telas sem a prévia da nota
+  // Trocar de aba não apaga a comanda em andamento; quem limpa é o botão "Limpar".
+  const go = id => (id === 'history' ? openHistory() : setView(id));
+
+  const order = buildOrder(form, items, customerId);
+  const counts = {};
+  for (const i of items) counts[i.name] = (counts[i.name] || 0) + (Number(i.qty) || 0);
+  const itemCount = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  const delivery = form.mode === 'Delivery';
   const term = search.toLowerCase();
   const filtered = history.orders.filter(o => (o.customer + ' ' + o.number).toLowerCase().includes(term));
   const small = paper === '58';
   const paperCss = `@page{size:${small ? '58' : '80'}mm 297mm;margin:3mm ${small ? '3' : '3.95'}mm}@media print{#receipt{width:${small ? '52' : '72.1'}mm}}`;
+  const receiptOrder = viewOrder || { ...order, number: editing?.number, createdAt: editing?.createdAt };
 
   return (
-    <>
-      <aside>
+    <div className="app">
+      <aside className="sidebar">
         <img src="/logo.png" alt="Lanchonete e Pizzaria Do Geovani" />
-        <div className="brand">PAINEL DA PIZZARIA</div>
-        <button className={'nav' + (view === 'editor' ? ' active' : '')} onClick={clearOrder}>＋ Novo pedido</button>
-        <button className={'nav' + (view === 'history' ? ' active' : '')} onClick={openHistory}>▤ Histórico de pedidos</button>
-        <button className={'nav' + (view === 'finance' ? ' active' : '')} onClick={() => setView('finance')}>▥ Financeiro</button>
-        <button className={'nav' + (view === 'menu' ? ' active' : '')} onClick={() => setView('menu')}>☰ Cardápio</button>
-        <button className={'nav' + (view === 'customers' ? ' active' : '')} onClick={() => setView('customers')}>☺ Clientes</button>
+        <nav>
+          {VIEWS.map(v => (
+            <button key={v.id} type="button" className={'nav' + (view === v.id ? ' active' : '')} aria-current={view === v.id ? 'page' : undefined} onClick={() => go(v.id)}>
+              <span aria-hidden="true">{v.icon}</span>{v.label}
+            </button>
+          ))}
+        </nav>
         <button type="button" id="themeToggle" className="nav" aria-pressed={dark} onClick={() => setDark(d => !d)}>
-          {dark ? '☀ Modo claro' : '☾ Modo escuro'}
+          <span aria-hidden="true">{dark ? '☀' : '☾'}</span>{dark ? 'Modo claro' : 'Modo escuro'}
         </button>
-        <div className="aside-bottom">Feito para o seu balcão.<br /><small>Pedidos salvos neste computador</small></div>
       </aside>
 
-      <main className={wide ? 'wide' : ''}>
-        <header>
-          <div>
-            <div className="eyebrow">LANCHONETE E PIZZARIA DO GEOVANI</div>
-            {view === 'finance' ? (
-              <>
-                <h1>Financeiro</h1>
-                <p>Acompanhe o faturamento do mês ou de qualquer período.</p>
-              </>
-            ) : view === 'customers' ? (
-              <>
-                <h1>Clientes</h1>
-                <p>Cadastros salvos neste computador, com o histórico de pedidos de cada um.</p>
-              </>
-            ) : view === 'menu' ? (
-              <>
-                <h1>Cardápio</h1>
-                <p>Adicione, edite ou remova itens. As mudanças valem para os próximos pedidos.</p>
-              </>
-            ) : (
-              <>
-                <h1>{editing ? `Editando pedido #${String(editing.number).padStart(4, '0')}` : 'Vamos preparar um pedido?'}</h1>
-                <p>{editing ? 'Altere o que precisar e salve para atualizar o histórico.' : 'Preencha, confira e imprima a comanda.'}</p>
-              </>
-            )}
-          </div>
-          <span className="badge">● Atendimento local</span>
-        </header>
+      <main>
+        {view !== 'editor' && (
+          <header className="page-head">
+            <h1>{HEADINGS[view][0]}</h1>
+            <p>{HEADINGS[view][1]}</p>
+          </header>
+        )}
 
         {view === 'finance' && <Finance />}
         {view === 'menu' && <MenuEditor menu={menu} onMenuChange={setMenu} />}
         {view === 'customers' && <Customers />}
 
         {view === 'history' && (
-          <section id="history">
-            <div className="card">
-              <h2>Histórico de pedidos</h2>
-              <input id="search" placeholder="Buscar por número ou cliente" value={search} onChange={e => setSearch(e.target.value)} />
-              <div id="orderList">
-                {history.error ? history.error : filtered.length ? filtered.map(o => (
-                  <div className="history-row" key={o.id}>
-                    <div>
-                      <strong>#{String(o.number).padStart(4, '0')} · {o.customer}</strong>
-                      <small>{new Date(o.createdAt).toLocaleString('pt-BR')} · {money(o.total)}</small>
-                    </div>
-                    <div className="history-actions">
-                      <button className="secondary" onClick={() => { setViewOrder(o); setPrintLabel('Reimprimir pedido #' + o.number); }}>
-                        Ver / imprimir
-                      </button>
-                      <button className="secondary" onClick={() => editOrder(o)}>Editar</button>
-                      <button className="secondary danger" onClick={() => deleteOrder(o)}>Excluir</button>
-                    </div>
+          <section className="card" id="history">
+            <input id="search" type="search" placeholder="Buscar por número ou cliente" value={search} onChange={e => setSearch(e.target.value)} />
+            <div id="orderList">
+              {history.error ? <p className="empty">{history.error}</p> : filtered.length ? filtered.map(o => (
+                <div className="history-row" key={o.id}>
+                  <div>
+                    <strong>#{pad(o.number)} · {o.customer}</strong>
+                    <small>{new Date(o.createdAt).toLocaleString('pt-BR')} · {o.mode} · {o.payment} · <b>{money(o.total)}</b></small>
                   </div>
-                )) : <p>Nenhum pedido encontrado.</p>}
-              </div>
+                  <div className="history-actions">
+                    <button type="button" className="secondary" onClick={() => showReceipt(o)}>Ver nota</button>
+                    <button type="button" className="secondary" onClick={() => editOrder(o)}>Editar</button>
+                    <button type="button" className="secondary danger" onClick={() => deleteOrder(o)}>Excluir</button>
+                  </div>
+                </div>
+              )) : <p className="empty">Nenhum pedido encontrado.</p>}
             </div>
           </section>
         )}
 
-        <section id="editor" hidden={view !== 'editor'}>
-          <form onSubmit={submit}>
+        <form id="editor" ref={formRef} onSubmit={submit} hidden={view !== 'editor'} className="order-layout">
+          <div className="order-main">
+            {editing && (
+              <div className="editing-banner">
+                <span>Editando o pedido <strong>#{pad(editing.number)}</strong>. Salvar atualiza o pedido no histórico.</span>
+                <button type="button" className="ghost small" onClick={newOrder}>Cancelar edição</button>
+              </div>
+            )}
+
             <div className="card">
-              <div className="section-title"><span className="step">01</span><h2>Cliente e entrega</h2></div>
+              <div className="card-head">
+                <h2>Cliente</h2>
+                <Segmented label="Tipo de pedido" value={form.mode} options={MODES} onChange={v => setValue('mode', v)} />
+              </div>
               <div className="grid">
-                <label>Nome do cliente *
-                  <CustomerSearch inputRef={customerRef} name="customer" required placeholder="Digite o nome ou escolha um cliente" value={form.customer} onChange={setField} onPick={pickCustomer} />
+                <label>Nome *
+                  <CustomerSearch inputRef={customerRef} name="customer" required placeholder="Nome ou busque um cliente" value={form.customer} onChange={setField} onPick={pickCustomer} />
                 </label>
                 <label>Telefone
                   <CustomerSearch name="phone" placeholder="(00) 00000-0000" value={form.phone} onChange={setField} onPick={pickCustomer} />
                 </label>
+                {delivery && (
+                  <>
+                    <label>Endereço e número<input name="address" placeholder="Rua, avenida e número" value={form.address} onChange={setField} /></label>
+                    <label>Bairro<input name="neighborhood" placeholder="Bairro" value={form.neighborhood} onChange={setField} /></label>
+                    <label>Complemento<input name="complement" placeholder="Casa, apartamento…" value={form.complement} onChange={setField} /></label>
+                    <label>Ponto de referência<input name="reference" placeholder="Próximo a…" value={form.reference} onChange={setField} /></label>
+                  </>
+                )}
                 <div className="customer-hint full">
                   <label className="check">
                     <input type="checkbox" checked={saveCustomer} onChange={e => setSaveCustomer(e.target.checked)} />
-                    {customerId ? 'Atualizar o cadastro do cliente com estes dados' : 'Salvar cliente na lista de clientes'}
+                    {customerId ? 'Atualizar o cadastro do cliente com estes dados' : 'Salvar na lista de clientes'}
                   </label>
-                  {customerId && <> ✓ Cliente cadastrado. <button type="button" className="link" onClick={() => setCustomerId(null)}>Não vincular</button></>}
+                  {customerId && <span>✓ Cliente cadastrado · <button type="button" className="link" onClick={() => setCustomerId(null)}>não vincular</button></span>}
                 </div>
-                <label>Tipo de pedido
-                  <select name="mode" value={form.mode} onChange={setField}>
-                    <option>Delivery</option><option>Retirada</option><option>Balcão</option>
-                  </select>
-                </label>
-                <label>Bairro<input name="neighborhood" placeholder="Bairro" value={form.neighborhood} onChange={setField} /></label>
-                <label className="full">Endereço e número<input name="address" placeholder="Rua, avenida e número" value={form.address} onChange={setField} /></label>
-                <label>Complemento<input name="complement" placeholder="Casa, apartamento..." value={form.complement} onChange={setField} /></label>
-                <label>Ponto de referência<input name="reference" placeholder="Próximo a..." value={form.reference} onChange={setField} /></label>
               </div>
             </div>
 
-            <div className="card">
-              <div className="section-title"><span className="step">02</span><h2>Itens do pedido</h2></div>
-              <div className="item-head"><span>Descrição</span><span>Qtd.</span><span>Valor un.</span><span /></div>
-              <div id="items">
-                {items.map(i => (
-                  <div className="item" key={i.key}>
-                    <MenuSearch value={i.name} menu={menu} onChange={v => setItem(i.key, 'name', v)} onPick={m => pickMenuItem(i.key, m)} />
-                    <input aria-label="Quantidade" type="number" min="1" max="999" step="1" required value={i.qty} onChange={e => setItem(i.key, 'qty', e.target.value)} />
-                    <input aria-label="Preço unitário" type="number" min="0" max="99999" step="0.01" required placeholder="0,00" value={i.price} onChange={e => setItem(i.key, 'price', e.target.value)} />
-                    <button type="button" className="remove" aria-label="Remover item" onClick={() => removeItem(i.key)}>×</button>
-                    {i.ingredients.length > 0 && <IngredientsEditor ingredients={i.ingredients} onChange={list => setItem(i.key, 'ingredients', list)} />}
-                    <label className="item-notes">Observação deste item
-                      <input aria-label="Observação do item" maxLength={500} placeholder="Ex.: sem bacon, sem cebola..." value={i.notes} onChange={e => setItem(i.key, 'notes', e.target.value)} />
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <button type="button" className="secondary" onClick={addItem}>＋ Adicionar item</button>
+            <MenuPicker menu={menu} counts={counts} onAdd={addFromMenu} searchRef={searchRef} />
+          </div>
+
+          <aside className="ticket" aria-label="Comanda">
+            <div className="ticket-head">
+              <h2>{editing ? `Pedido #${pad(editing.number)}` : 'Comanda'}</h2>
+              <span>{itemCount} {itemCount === 1 ? 'item' : 'itens'}</span>
             </div>
 
-            <div className="card">
-              <div className="section-title"><span className="step">03</span><h2>Pagamento e observações</h2></div>
-              <div className="grid">
-                <label>Forma de pagamento
-                  <select name="payment" value={form.payment} onChange={setField}>
-                    <option>Pix</option><option>Dinheiro</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>iFood</option>
-                  </select>
-                </label>
-                <label>Taxa de entrega (R$)<input name="fee" type="number" min="0" step="0.01" required value={form.fee} onChange={setField} /></label>
-                <label>Desconto (R$)<input name="discount" type="number" min="0" step="0.01" required value={form.discount} onChange={setField} /></label>
-                <label className="full">Observações<textarea name="notes" placeholder="Ex.: sem cebola, pizza meio a meio, troco para R$ 100..." value={form.notes} onChange={setField} /></label>
+            <div className="ticket-body">
+              {items.length ? items.map(i => (
+                <OrderLine
+                  key={i.key}
+                  item={i}
+                  menu={menu}
+                  expanded={expanded === i.key}
+                  onToggle={() => setExpanded(expanded === i.key ? null : i.key)}
+                  onChange={(field, value) => setItem(i.key, field, value)}
+                  onPick={m => pickForLine(i.key, m)}
+                  onRemove={() => removeItem(i.key)}
+                />
+              )) : <p className="empty ticket-empty">Clique nos itens do cardápio para montar o pedido.</p>}
+              <button type="button" className="ghost small add-custom" onClick={addCustom}>＋ Item fora do cardápio</button>
+
+              <div className="ticket-section">
+                <span className="section-label">Pagamento</span>
+                <Segmented label="Forma de pagamento" value={form.payment} options={PAYMENTS} onChange={v => setValue('payment', v)} />
+                <div className="grid">
+                  {delivery && <label>Taxa de entrega<input name="fee" type="number" min="0" step="0.01" value={form.fee} onChange={setField} /></label>}
+                  <label>Desconto<input name="discount" type="number" min="0" step="0.01" value={form.discount} onChange={setField} /></label>
+                  <label className="full">Observações<textarea name="notes" rows={2} placeholder="Troco para R$ 100, pizza meio a meio…" value={form.notes} onChange={setField} /></label>
+                </div>
               </div>
             </div>
 
-            <div className="actions">
-              <span role="status">{message}</span>
-              <button type="button" className="secondary" onClick={clearOrder}>{editing ? 'Cancelar edição / novo pedido' : 'Limpar / próximo pedido'}</button>
-              <button type="submit" disabled={saving}>{editing ? 'Salvar alterações e imprimir' : 'Salvar e imprimir pedido'}</button>
+            <div className="ticket-foot">
+              <dl className="totals">
+                <div><dt>Subtotal</dt><dd>{money(order.subtotal)}</dd></div>
+                {order.fee > 0 && <div><dt>Entrega</dt><dd>{money(order.fee)}</dd></div>}
+                {order.discount > 0 && <div><dt>Desconto</dt><dd>− {money(order.discount)}</dd></div>}
+                <div className="grand"><dt>Total</dt><dd>{money(order.total)}</dd></div>
+              </dl>
+              <button type="submit" className="save" disabled={saving || !items.length}>
+                {saving ? 'Salvando…' : editing ? 'Salvar alterações e imprimir' : 'Salvar e imprimir'}
+                <kbd>Ctrl+Enter</kbd>
+              </button>
+              <div className="ticket-actions">
+                <button type="button" className="ghost small" onClick={() => showReceipt(null)}>Prévia da nota</button>
+                <button type="button" className="ghost small" onClick={newOrder}>{editing ? 'Cancelar' : 'Limpar'}</button>
+              </div>
             </div>
-          </form>
-        </section>
+          </aside>
+        </form>
       </main>
 
-      <section className="preview" hidden={wide}>
-        <div className="preview-header">
-          <h2>Prévia da nota</h2>
-          <select aria-label="Largura do papel" value={paper} onChange={e => setPaper(e.target.value)}>
-            <option value="80">80 mm · útil 72,1 mm</option>
-            <option value="58">58 mm</option>
-          </select>
+      {/* A nota fica sempre na página (escondida) para poder ser impressa a qualquer momento. */}
+      <div className={'receipt-modal' + (receiptOpen ? ' open' : '')} role="dialog" aria-modal="true" aria-label="Nota do pedido" onClick={e => e.target === e.currentTarget && closeReceipt()}>
+        <div className="modal">
+          <div className="modal-head">
+            <h2>{viewOrder ? `Nota do pedido #${pad(viewOrder.number)}` : 'Prévia da nota'}</h2>
+            <select aria-label="Largura do papel" value={paper} onChange={e => setPaper(e.target.value)}>
+              <option value="80">80 mm</option>
+              <option value="58">58 mm</option>
+            </select>
+          </div>
+          {mounted ? <Receipt order={receiptOrder} /> : <article id="receipt" />}
+          <div className="modal-foot">
+            <button type="button" className="secondary" onClick={closeReceipt}>Fechar</button>
+            <button type="button" onClick={() => setPrintRequest(n => n + 1)}>{viewOrder ? 'Reimprimir' : 'Imprimir'}</button>
+          </div>
         </div>
-        <p className="preview-hint">A nota será impressa em preto e branco.</p>
-        {mounted
-          ? <Receipt order={viewOrder || { ...buildOrder(form, items, customerId), number: editing?.number, createdAt: editing?.createdAt }} />
-          : <article id="receipt" />}
-        <button className="secondary" onClick={() => setPrintRequest(n => n + 1)}>{printLabel}</button>
-        <p className="preview-hint">Documento não fiscal • impressão pelo navegador</p>
-      </section>
+      </div>
+
+      {toast && <div key={toast.id} className={'toast ' + toast.kind} role="status">{toast.text}</div>}
       <style>{paperCss}</style>
-    </>
+    </div>
   );
 }

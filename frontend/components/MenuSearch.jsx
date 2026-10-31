@@ -2,18 +2,12 @@
 
 import { useState } from 'react';
 import { money } from '../lib/format';
-
-// Busca sem acento, hífen ou maiúsculas: "hamburguer bacon" acha "HAMBÚRGUER BACON" e "xtudo" acha "X-TUDO".
-const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const matchesAll = (words, text) => {
-  const hay = norm(text), compact = hay.replace(/ /g, '');
-  return words.every(w => hay.includes(w) || compact.includes(w));
-};
+import { matchesAll, searchWords } from '../lib/search';
 
 export default function MenuSearch({ value, menu, onChange, onPick }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const words = norm(value).split(/\s+/).filter(Boolean);
+  const words = searchWords(value);
   const matches = words.length ? menu.filter(m => matchesAll(words, m.name + ' ' + m.category)).slice(0, 8) : [];
   const show = open && matches.length > 0;
   const pick = m => { onPick(m); setOpen(false); };

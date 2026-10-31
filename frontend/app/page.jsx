@@ -74,7 +74,6 @@ export default function Home() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [receiptOpen, setReceiptOpen] = useState(false);
   const [printRequest, setPrintRequest] = useState(0);
   const [history, setHistory] = useState({ orders: [], error: '' });
   const [search, setSearch] = useState('');
@@ -115,10 +114,9 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Atalhos: Ctrl+Enter salva, F2 vai para a busca do cardápio, Esc fecha a nota.
+  // Atalhos: Ctrl+Enter salva, F2 vai para a busca do cardápio.
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape' && receiptOpen) closeReceipt();
       if (view !== 'editor') return;
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); formRef.current?.requestSubmit(); }
       if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); }
@@ -128,23 +126,26 @@ export default function Home() {
   });
 
   const notify = (text, kind = 'ok') => setToast({ text, kind, id: Date.now() });
-  const setField = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-  const setValue = (name, value) => setForm(f => ({ ...f, [name]: value }));
-  const setItem = (key, field, value) => setItems(list => list.map(i => (i.key === key ? { ...i, [field]: value } : i)));
+  // Qualquer mudança no pedido faz a prévia voltar a mostrar o pedido em andamento.
+  const edit = () => setViewOrder(null);
+  const setField = e => { setForm(f => ({ ...f, [e.target.name]: e.target.value })); edit(); };
+  const setValue = (name, value) => { setForm(f => ({ ...f, [name]: value })); edit(); };
+  const setItem = (key, field, value) => { setItems(list => list.map(i => (i.key === key ? { ...i, [field]: value } : i))); edit(); };
 
   // Clicar de novo num item igual (sem ajustes) só aumenta a quantidade.
   function addFromMenu(m) {
     const same = items.find(i => i.name === m.name && Number(i.price) === m.price && untouched(i));
     if (same) setItem(same.key, 'qty', String(Math.min(999, Number(same.qty) + 1)));
-    else setItems(list => [...list, fromMenu(m)]);
+    else { setItems(list => [...list, fromMenu(m)]); edit(); }
   }
   const addCustom = () => {
     const item = newItem({ custom: true });
     setItems(list => [...list, item]);
     setExpanded(item.key);
+    edit();
   };
-  const pickForLine = (key, m) => setItems(list => list.map(i => (i.key === key ? { ...fromMenu(m), key } : i)));
-  const removeItem = key => setItems(list => list.filter(i => i.key !== key));
+  const pickForLine = (key, m) => { setItems(list => list.map(i => (i.key === key ? { ...fromMenu(m), key } : i))); edit(); };
+  const removeItem = key => { setItems(list => list.filter(i => i.key !== key)); edit(); };
 
   const pickCustomer = c => {
     setForm(f => ({
@@ -157,6 +158,7 @@ export default function Home() {
       reference: c.reference,
     }));
     setCustomerId(c.id);
+    edit();
   };
 
   function resetOrder() {
@@ -237,8 +239,6 @@ export default function Home() {
     }
   }
 
-  const showReceipt = order => { setViewOrder(order); setReceiptOpen(true); };
-  function closeReceipt() { setReceiptOpen(false); setViewOrder(null); }
 
   // Trocar de aba não apaga a comanda em andamento; quem limpa é o botão "Limpar".
   const go = id => (id === 'history' ? openHistory() : setView(id));
@@ -248,6 +248,7 @@ export default function Home() {
   for (const i of items) counts[i.name] = (counts[i.name] || 0) + (Number(i.qty) || 0);
   const itemCount = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
   const delivery = form.mode === 'Delivery';
+  const wide = view === 'finance' || view === 'menu' || view === 'customers'; // telas sem a prévia da nota
   const term = search.toLowerCase();
   const filtered = history.orders.filter(o => (o.customer + ' ' + o.number).toLowerCase().includes(term));
   const small = paper === '58';
@@ -293,7 +294,7 @@ export default function Home() {
                     <small>{new Date(o.createdAt).toLocaleString('pt-BR')} · {o.mode} · {o.payment} · <b>{money(o.total)}</b></small>
                   </div>
                   <div className="history-actions">
-                    <button type="button" className="secondary" onClick={() => showReceipt(o)}>Ver nota</button>
+                    <button type="button" className="secondary" onClick={() => setViewOrder(o)}>Ver / imprimir</button>
                     <button type="button" className="secondary" onClick={() => editOrder(o)}>Editar</button>
                     <button type="button" className="secondary danger" onClick={() => deleteOrder(o)}>Excluir</button>
                   </div>
@@ -389,31 +390,28 @@ export default function Home() {
                 <kbd>Ctrl+Enter</kbd>
               </button>
               <div className="ticket-actions">
-                <button type="button" className="ghost small" onClick={() => showReceipt(null)}>Prévia da nota</button>
-                <button type="button" className="ghost small" onClick={newOrder}>{editing ? 'Cancelar' : 'Limpar'}</button>
+                <button type="button" className="ghost small" onClick={newOrder}>{editing ? 'Cancelar edição' : 'Limpar / próximo pedido'}</button>
               </div>
             </div>
           </aside>
         </form>
       </main>
 
-      {/* A nota fica sempre na página (escondida) para poder ser impressa a qualquer momento. */}
-      <div className={'receipt-modal' + (receiptOpen ? ' open' : '')} role="dialog" aria-modal="true" aria-label="Nota do pedido" onClick={e => e.target === e.currentTarget && closeReceipt()}>
-        <div className="modal">
-          <div className="modal-head">
-            <h2>{viewOrder ? `Nota do pedido #${pad(viewOrder.number)}` : 'Prévia da nota'}</h2>
-            <select aria-label="Largura do papel" value={paper} onChange={e => setPaper(e.target.value)}>
-              <option value="80">80 mm</option>
-              <option value="58">58 mm</option>
-            </select>
-          </div>
-          {mounted ? <Receipt order={receiptOrder} /> : <article id="receipt" />}
-          <div className="modal-foot">
-            <button type="button" className="secondary" onClick={closeReceipt}>Fechar</button>
-            <button type="button" onClick={() => setPrintRequest(n => n + 1)}>{viewOrder ? 'Reimprimir' : 'Imprimir'}</button>
-          </div>
+      <section className="preview" hidden={wide}>
+        <div className="preview-header">
+          <h2>Prévia da nota</h2>
+          <select aria-label="Largura do papel" value={paper} onChange={e => setPaper(e.target.value)}>
+            <option value="80">80 mm · útil 72,1 mm</option>
+            <option value="58">58 mm</option>
+          </select>
         </div>
-      </div>
+        <p className="preview-hint">A nota será impressa em preto e branco.</p>
+        {mounted ? <Receipt order={receiptOrder} /> : <article id="receipt" />}
+        <button type="button" className="secondary" onClick={() => setPrintRequest(n => n + 1)}>
+          {viewOrder ? 'Reimprimir pedido #' + viewOrder.number : 'Imprimir prévia'}
+        </button>
+        <p className="preview-hint">Documento não fiscal • impressão pelo navegador</p>
+      </section>
 
       {toast && <div key={toast.id} className={'toast ' + toast.kind} role="status">{toast.text}</div>}
       <style>{paperCss}</style>

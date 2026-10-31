@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Receipt from '../components/Receipt';
 import Finance from '../components/Finance';
 import MenuEditor from '../components/MenuEditor';
-import MenuPicker from '../components/MenuPicker';
-import OrderLine from '../components/OrderLine';
+import MenuSearch from '../components/MenuSearch';
+import IngredientsEditor from '../components/IngredientsEditor';
 import Segmented from '../components/Segmented';
 import CustomerSearch from '../components/CustomerSearch';
 import Customers from '../components/Customers';
@@ -21,7 +21,7 @@ const PAYMENTS = [
   { value: 'Dinheiro', label: 'Dinheiro' },
   { value: 'Cartão de crédito', label: 'Crédito' },
   { value: 'Cartão de débito', label: 'Débito' },
-  { value: 'iFood', label: 'iFood' },
+  { value: 'Não informado', label: 'Não informado' },
 ];
 const VIEWS = [
   { id: 'editor', icon: '＋', label: 'Novo pedido' },
@@ -39,8 +39,6 @@ const HEADINGS = {
 
 let itemKey = 0;
 const newItem = fields => ({ key: ++itemKey, name: '', qty: '1', price: '', notes: '', ingredients: [], ...fields });
-const fromMenu = m => newItem({ name: m.name, price: String(m.price), ingredients: m.ingredients.map(name => ({ name, removed: false, extra: false })) });
-const untouched = i => !i.custom && !i.notes.trim() && i.ingredients.every(g => !g.removed && !g.extra);
 const pad = n => String(n).padStart(4, '0');
 
 function buildOrder(form, items, customerId = null) {
@@ -68,8 +66,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState('editor');
   const [form, setForm] = useState(emptyForm);
-  const [items, setItems] = useState([]);
-  const [expanded, setExpanded] = useState(null); // key do item com ajustes abertos
+  const [items, setItems] = useState(() => [newItem()]);
   const [viewOrder, setViewOrder] = useState(null); // pedido salvo mostrado na nota
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -83,7 +80,6 @@ export default function Home() {
   const [customerId, setCustomerId] = useState(null); // cliente cadastrado escolhido no pedido
   const [saveCustomer, setSaveCustomer] = useState(true); // caixinha "Salvar cliente"
   const customerRef = useRef(null);
-  const searchRef = useRef(null);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -114,12 +110,11 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Atalhos: Ctrl+Enter salva, F2 vai para a busca do cardápio.
+  // Atalho: Ctrl+Enter salva e imprime.
   useEffect(() => {
     function onKey(e) {
       if (view !== 'editor') return;
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); formRef.current?.requestSubmit(); }
-      if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -132,20 +127,18 @@ export default function Home() {
   const setValue = (name, value) => { setForm(f => ({ ...f, [name]: value })); edit(); };
   const setItem = (key, field, value) => { setItems(list => list.map(i => (i.key === key ? { ...i, [field]: value } : i))); edit(); };
 
-  // Clicar de novo num item igual (sem ajustes) só aumenta a quantidade.
-  function addFromMenu(m) {
-    const same = items.find(i => i.name === m.name && Number(i.price) === m.price && untouched(i));
-    if (same) setItem(same.key, 'qty', String(Math.min(999, Number(same.qty) + 1)));
-    else { setItems(list => [...list, fromMenu(m)]); edit(); }
-  }
-  const addCustom = () => {
-    const item = newItem({ custom: true });
-    setItems(list => [...list, item]);
-    setExpanded(item.key);
+  // Escolher um item do cardápio preenche nome, preço e ingredientes (tudo continua editável).
+  const pickMenuItem = (key, m) => {
+    setItems(list => list.map(i => (i.key === key ? {
+      ...i,
+      name: m.name,
+      price: String(m.price),
+      ingredients: m.ingredients.map(name => ({ name, removed: false, extra: false })),
+    } : i)));
     edit();
   };
-  const pickForLine = (key, m) => { setItems(list => list.map(i => (i.key === key ? { ...fromMenu(m), key } : i))); edit(); };
-  const removeItem = key => { setItems(list => list.filter(i => i.key !== key)); edit(); };
+  const removeItem = key => { if (items.length > 1) { setItems(list => list.filter(i => i.key !== key)); edit(); } };
+  const addItem = () => { setItems(list => [...list, newItem()]); edit(); };
 
   const pickCustomer = c => {
     setForm(f => ({
@@ -163,8 +156,7 @@ export default function Home() {
 
   function resetOrder() {
     setForm(emptyForm);
-    setItems([]);
-    setExpanded(null);
+    setItems([newItem()]);
     setEditing(null);
     setCustomerId(null);
     setSaveCustomer(true);
@@ -179,7 +171,6 @@ export default function Home() {
 
   async function submit(e) {
     e.preventDefault();
-    if (!items.length) { notify('Adicione pelo menos um item à comanda.', 'error'); return; }
     setSaving(true);
     try {
       const response = await fetch(editing ? '/api/orders/' + editing.id : '/api/orders', {
@@ -217,7 +208,6 @@ export default function Home() {
     const text = v => String(v ?? '');
     setForm(Object.fromEntries(Object.keys(emptyForm).map(k => [k, text(o[k])])));
     setItems(o.items.map(i => newItem({ name: i.name, qty: text(i.qty), price: text(i.price), notes: text(i.notes), ingredients: i.ingredients || [] })));
-    setExpanded(null);
     setEditing(o);
     setCustomerId(o.customerId ?? null);
     setSaveCustomer(true);
@@ -244,9 +234,6 @@ export default function Home() {
   const go = id => (id === 'history' ? openHistory() : setView(id));
 
   const order = buildOrder(form, items, customerId);
-  const counts = {};
-  for (const i of items) counts[i.name] = (counts[i.name] || 0) + (Number(i.qty) || 0);
-  const itemCount = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
   const delivery = form.mode === 'Delivery';
   const wide = view === 'finance' || view === 'menu' || view === 'customers'; // telas sem a prévia da nota
   const term = search.toLowerCase();
@@ -304,96 +291,84 @@ export default function Home() {
           </section>
         )}
 
-        <form id="editor" ref={formRef} onSubmit={submit} hidden={view !== 'editor'} className="order-layout">
-          <div className="order-main">
-            {editing && (
-              <div className="editing-banner">
-                <span>Editando o pedido <strong>#{pad(editing.number)}</strong>. Salvar atualiza o pedido no histórico.</span>
-                <button type="button" className="ghost small" onClick={newOrder}>Cancelar edição</button>
-              </div>
-            )}
+        <form id="editor" ref={formRef} onSubmit={submit} hidden={view !== 'editor'}>
+          {editing && (
+            <div className="editing-banner">
+              <span>Editando o pedido <strong>#{pad(editing.number)}</strong>. Salvar atualiza o pedido no histórico.</span>
+              <button type="button" className="ghost small" onClick={newOrder}>Cancelar edição</button>
+            </div>
+          )}
 
-            <div className="card">
-              <div className="card-head">
-                <h2>Cliente</h2>
-                <Segmented label="Tipo de pedido" value={form.mode} options={MODES} onChange={v => setValue('mode', v)} />
-              </div>
-              <div className="grid">
-                <label>Nome *
-                  <CustomerSearch inputRef={customerRef} name="customer" required placeholder="Nome ou busque um cliente" value={form.customer} onChange={setField} onPick={pickCustomer} />
+          <div className="card">
+            <div className="card-head">
+              <h2>Cliente e entrega</h2>
+              <Segmented label="Tipo de pedido" value={form.mode} options={MODES} onChange={v => setValue('mode', v)} />
+            </div>
+            <div className="grid">
+              <label>Nome do cliente *
+                <CustomerSearch inputRef={customerRef} name="customer" required placeholder="Digite o nome ou escolha um cliente" value={form.customer} onChange={setField} onPick={pickCustomer} />
+              </label>
+              <label>Telefone
+                <CustomerSearch name="phone" placeholder="(00) 00000-0000" value={form.phone} onChange={setField} onPick={pickCustomer} />
+              </label>
+              {delivery && (
+                <>
+                  <label>Endereço e número<input name="address" placeholder="Rua, avenida e número" value={form.address} onChange={setField} /></label>
+                  <label>Bairro<input name="neighborhood" placeholder="Bairro" value={form.neighborhood} onChange={setField} /></label>
+                  <label>Complemento<input name="complement" placeholder="Casa, apartamento…" value={form.complement} onChange={setField} /></label>
+                  <label>Ponto de referência<input name="reference" placeholder="Próximo a…" value={form.reference} onChange={setField} /></label>
+                </>
+              )}
+              <div className="customer-hint full">
+                <label className="check">
+                  <input type="checkbox" checked={saveCustomer} onChange={e => setSaveCustomer(e.target.checked)} />
+                  {customerId ? 'Atualizar o cadastro do cliente com estes dados' : 'Salvar na lista de clientes'}
                 </label>
-                <label>Telefone
-                  <CustomerSearch name="phone" placeholder="(00) 00000-0000" value={form.phone} onChange={setField} onPick={pickCustomer} />
-                </label>
-                {delivery && (
-                  <>
-                    <label>Endereço e número<input name="address" placeholder="Rua, avenida e número" value={form.address} onChange={setField} /></label>
-                    <label>Bairro<input name="neighborhood" placeholder="Bairro" value={form.neighborhood} onChange={setField} /></label>
-                    <label>Complemento<input name="complement" placeholder="Casa, apartamento…" value={form.complement} onChange={setField} /></label>
-                    <label>Ponto de referência<input name="reference" placeholder="Próximo a…" value={form.reference} onChange={setField} /></label>
-                  </>
-                )}
-                <div className="customer-hint full">
-                  <label className="check">
-                    <input type="checkbox" checked={saveCustomer} onChange={e => setSaveCustomer(e.target.checked)} />
-                    {customerId ? 'Atualizar o cadastro do cliente com estes dados' : 'Salvar na lista de clientes'}
-                  </label>
-                  {customerId && <span>✓ Cliente cadastrado · <button type="button" className="link" onClick={() => setCustomerId(null)}>não vincular</button></span>}
-                </div>
+                {customerId && <span>✓ Cliente cadastrado · <button type="button" className="link" onClick={() => setCustomerId(null)}>não vincular</button></span>}
               </div>
             </div>
-
-            <MenuPicker menu={menu} counts={counts} onAdd={addFromMenu} searchRef={searchRef} />
           </div>
 
-          <aside className="ticket" aria-label="Comanda">
-            <div className="ticket-head">
-              <h2>{editing ? `Pedido #${pad(editing.number)}` : 'Comanda'}</h2>
-              <span>{itemCount} {itemCount === 1 ? 'item' : 'itens'}</span>
-            </div>
-
-            <div className="ticket-body">
-              {items.length ? items.map(i => (
-                <OrderLine
-                  key={i.key}
-                  item={i}
-                  menu={menu}
-                  expanded={expanded === i.key}
-                  onToggle={() => setExpanded(expanded === i.key ? null : i.key)}
-                  onChange={(field, value) => setItem(i.key, field, value)}
-                  onPick={m => pickForLine(i.key, m)}
-                  onRemove={() => removeItem(i.key)}
-                />
-              )) : <p className="empty ticket-empty">Clique nos itens do cardápio para montar o pedido.</p>}
-              <button type="button" className="ghost small add-custom" onClick={addCustom}>＋ Item fora do cardápio</button>
-
-              <div className="ticket-section">
-                <span className="section-label">Pagamento</span>
-                <Segmented label="Forma de pagamento" value={form.payment} options={PAYMENTS} onChange={v => setValue('payment', v)} />
-                <div className="grid">
-                  {delivery && <label>Taxa de entrega<input name="fee" type="number" min="0" step="0.01" value={form.fee} onChange={setField} /></label>}
-                  <label>Desconto<input name="discount" type="number" min="0" step="0.01" value={form.discount} onChange={setField} /></label>
-                  <label className="full">Observações<textarea name="notes" rows={2} placeholder="Troco para R$ 100, pizza meio a meio…" value={form.notes} onChange={setField} /></label>
+          <div className="card">
+            <h2>Itens do pedido</h2>
+            <div className="item-head"><span>Descrição</span><span>Qtd.</span><span>Valor un.</span><span /></div>
+            <div id="items">
+              {items.map(i => (
+                <div className="item" key={i.key}>
+                  <MenuSearch value={i.name} menu={menu} onChange={v => setItem(i.key, 'name', v)} onPick={m => pickMenuItem(i.key, m)} />
+                  <input aria-label="Quantidade" type="number" min="1" max="999" step="1" required value={i.qty} onChange={e => setItem(i.key, 'qty', e.target.value)} />
+                  <input aria-label="Preço unitário" type="number" min="0" max="99999" step="0.01" required placeholder="0,00" value={i.price} onChange={e => setItem(i.key, 'price', e.target.value)} />
+                  <button type="button" className="remove" aria-label="Remover item" disabled={items.length === 1} onClick={() => removeItem(i.key)}>✕</button>
+                  {i.ingredients.length > 0 && <IngredientsEditor ingredients={i.ingredients} onChange={list => setItem(i.key, 'ingredients', list)} />}
+                  <input className="item-notes" aria-label="Observação do item" maxLength={500} placeholder="Observação deste item (ex.: bem passado)" value={i.notes} onChange={e => setItem(i.key, 'notes', e.target.value)} />
                 </div>
-              </div>
+              ))}
             </div>
+            <button type="button" className="secondary" onClick={addItem}>＋ Adicionar item</button>
+          </div>
 
-            <div className="ticket-foot">
-              <dl className="totals">
-                <div><dt>Subtotal</dt><dd>{money(order.subtotal)}</dd></div>
-                {order.fee > 0 && <div><dt>Entrega</dt><dd>{money(order.fee)}</dd></div>}
-                {order.discount > 0 && <div><dt>Desconto</dt><dd>− {money(order.discount)}</dd></div>}
-                <div className="grand"><dt>Total</dt><dd>{money(order.total)}</dd></div>
-              </dl>
-              <button type="submit" className="save" disabled={saving || !items.length}>
-                {saving ? 'Salvando…' : editing ? 'Salvar alterações e imprimir' : 'Salvar e imprimir'}
-                <kbd>Ctrl+Enter</kbd>
-              </button>
-              <div className="ticket-actions">
-                <button type="button" className="ghost small" onClick={newOrder}>{editing ? 'Cancelar edição' : 'Limpar / próximo pedido'}</button>
+          <div className="card">
+            <h2>Pagamento e observações</h2>
+            <div className="grid">
+              <div className="full">
+                <Segmented label="Forma de pagamento" value={form.payment} options={PAYMENTS} onChange={v => setValue('payment', v)} />
               </div>
+              {delivery && <label>Taxa de entrega (R$)<input name="fee" type="number" min="0" step="0.01" value={form.fee} onChange={setField} /></label>}
+              <label>Desconto (R$)<input name="discount" type="number" min="0" step="0.01" value={form.discount} onChange={setField} /></label>
+              <label className="full">Observações<textarea name="notes" rows={2} placeholder="Ex.: troco para R$ 100, pizza meio a meio…" value={form.notes} onChange={setField} /></label>
             </div>
-          </aside>
+          </div>
+
+          <div className="actions-bar">
+            <div className="actions-total">
+              <span>Total</span>
+              <strong>{money(order.total)}</strong>
+            </div>
+            <button type="button" className="secondary" onClick={newOrder}>{editing ? 'Cancelar edição' : 'Limpar / próximo pedido'}</button>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Salvando…' : editing ? 'Salvar alterações e imprimir' : 'Salvar e imprimir pedido'}
+            </button>
+          </div>
         </form>
       </main>
 
